@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -8,22 +8,21 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #ece5dd; /* WhatsApp bg */
+  background: #ece5dd;
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* ===== Container ===== */
 .container {
   display: flex;
   flex: 1;
-  height: calc(var(--vh, 1vh) * 100);
+  height: 100vh;
   overflow: hidden;
 }
 
-/* ===== Sidebar ===== */
+/* Sidebar */
 .users-list {
   width: 250px;
   background: #fff;
@@ -40,13 +39,12 @@ body {
   background: #f9f9f9;
 }
 
-/* ===== Chat Section ===== */
+/* Chat Section */
 .chat-section {
   flex: 1;
   display: flex;
   flex-direction: column;
   background: #efeae2;
-  height: 100%;
   position: relative;
 }
 
@@ -73,9 +71,11 @@ body {
 
 /* Messages */
 .messages {
-  flex: 1;
-  margin-top: 60px;      /* header ke liye space */
-  margin-bottom: 60px;   /* input ke liye space */
+  position: absolute;
+  top: 60px;      /* header ke neeche */
+  bottom: 60px;   /* input ke upar */
+  left: 0;
+  right: 0;
   padding: 10px;
   overflow-y: auto;
   display: flex;
@@ -138,7 +138,7 @@ body {
   font-size: 16px;
 }
 
-/* ===== Mobile Responsive ===== */
+/* Mobile Responsive */
 @media (max-width: 768px) {
   .users-list {
     position: fixed;
@@ -156,10 +156,10 @@ body {
     display: block;
   }
   .chat-header {
-    left: 0; /* full width header */
+    left: 0;
   }
   .input-container {
-    left: 0; /* full width input */
+    left: 0;
   }
 }
 </style>
@@ -187,7 +187,6 @@ import {
   serverTimestamp, doc, updateDoc, limit 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ✅ Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyApQC0SouXaNm8LGZkOL6lj3BZ3NXrSNWM",
   authDomain: "bittrades.firebaseapp.com",
@@ -210,42 +209,31 @@ const menuBtn = document.getElementById("menuBtn");
 let currentUserId = null;
 let userData = {};
 
-// ✅ Ask for notification permission once
 if (Notification.permission !== "granted") {
   Notification.requestPermission();
 }
 
-// ✅ Mobile menu toggle
 menuBtn.addEventListener("click", () => {
   usersList.classList.toggle("active");
 });
 
-// ✅ Load users + listen for messages
 function loadUsers() {
   const chatsRef = collection(db, "chats");
-
   onSnapshot(chatsRef, (snapshot) => {
     snapshot.forEach((docSnap) => {
       const userId = docSnap.id;
-      const userInfo = docSnap.data(); // yaha se "name" milega
+      const userInfo = docSnap.data();
       const messagesRef = collection(db, "chats", userId, "messages");
-
       onSnapshot(query(messagesRef, orderBy("timestamp", "desc"), limit(1)), (msgs) => {
         if (!msgs.empty) {
           const latest = msgs.docs[0].data();
-
-          // ✅ userData update
           userData[userId] = {
             name: userInfo?.name || userId,
             lastMessage: latest.text,
             lastMessageTime: latest.timestamp ? latest.timestamp.toMillis() : Date.now(),
             unreadCount: latest.sender === "user" && !latest.read ? 1 : 0
           };
-
-          // ✅ Render karo
           renderUsers();
-
-          // ✅ Notification
           if (latest.sender === "user" && !latest.read) {
             if (Notification.permission === "granted") {
               new Notification(`New message from ${userInfo?.name || userId}`, {
@@ -261,7 +249,6 @@ function loadUsers() {
 }
 loadUsers();
 
-// ✅ Render users list
 function renderUsers() {
   usersList.innerHTML = "";
   const sortedUsers = Object.entries(userData)
@@ -270,7 +257,6 @@ function renderUsers() {
   sortedUsers.forEach(([userId, data]) => {
     const time = new Date(data.lastMessageTime);
     const timeStr = time.getHours() + ":" + String(time.getMinutes()).padStart(2, '0');
-
     const userDiv = document.createElement("div");
     userDiv.className = "user-item";
     userDiv.innerHTML = `
@@ -291,12 +277,10 @@ function renderUsers() {
   });
 }
 
-// ✅ Open chat
 function openChat(userId) {
   currentUserId = userId;
   chatHeader.textContent = `Chat with ${userData[userId]?.name || userId}`;
   const messagesRef = collection(db, "chats", userId, "messages");
-
   onSnapshot(query(messagesRef, orderBy("timestamp")), (snapshot) => {
     messagesDiv.innerHTML = "";
     snapshot.forEach(async (docSnap) => {
@@ -304,15 +288,12 @@ function openChat(userId) {
       const msgDiv = document.createElement("div");
       msgDiv.classList.add("message", data.sender);
       msgDiv.textContent = data.text;
-
       const timeSpan = document.createElement("span");
       timeSpan.className = "time";
       const time = data.timestamp ? new Date(data.timestamp.toDate()) : new Date();
       timeSpan.textContent = time.getHours() + ":" + String(time.getMinutes()).padStart(2, '0');
       msgDiv.appendChild(timeSpan);
       messagesDiv.appendChild(msgDiv);
-
-      // ✅ Mark as read
       if (data.sender === "user" && !data.read) {
         await updateDoc(doc(db, "chats", userId, "messages", docSnap.id), { read: true });
       }
@@ -321,7 +302,6 @@ function openChat(userId) {
   });
 }
 
-// ✅ Send message
 window.sendMessage = async function() {
   if (!currentUserId) return;
   const text = input.value.trim();
