@@ -1,0 +1,310 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Chat - TrustDollar</title>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f0f0f0;
+}
+.container {
+  display: flex;
+  height: 100vh;
+}
+.users-list {
+  width: 250px;
+  background: #fff;
+  border-right: 1px solid #ccc;
+  overflow-y: auto;
+  transition: transform 0.3s ease-in-out;
+}
+.user-item {
+  padding: 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+}
+.user-item:hover {
+  background: #f9f9f9;
+}
+.unread {
+  background: red;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+.chat-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.chat-header {
+  background: #075E54;
+  color: white;
+  padding: 15px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+#menuBtn {
+  display: none; /* default hidden */
+  font-size: 22px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+.messages {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  background: #efeae2;
+  display: flex;
+  flex-direction: column;
+}
+.message {
+  padding: 8px 12px 18px;
+  margin: 8px;
+  border-radius: 8px;
+  max-width: 60%;
+  position: relative;
+  font-size: 14px;
+  word-wrap: break-word;
+}
+.message.user {
+  background: #fff;
+  align-self: flex-start;
+}
+.message.admin {
+  background: #dcf8c6;
+  align-self: flex-end;
+}
+.message .time {
+  font-size: 10px;
+  color: #888;
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+}
+.input-container {
+  display: flex;
+  padding: 10px;
+  background: #fff;
+  border-top: 1px solid #ccc;
+}
+.input-container input {
+  flex: 1;
+  padding: 10px;
+  font-size: 14px;
+  border: none;
+  outline: none;
+  border-radius: 20px;
+  background: #f0f0f0;
+}
+.input-container button {
+  background: #075E54;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  margin-left: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* ✅ Mobile Responsive */
+@media (max-width: 768px) {
+  .users-list {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    transform: translateX(-100%);
+    z-index: 1000;
+  }
+  .users-list.active {
+    transform: translateX(0);
+  }
+  #menuBtn {
+    display: block;
+  }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="users-list" id="usersList"></div>
+  <div class="chat-section">
+    <div class="chat-header">
+      <span id="menuBtn">☰</span>
+      <span id="chatHeader">Select a user</span>
+    </div>
+    <div id="messages" class="messages"></div>
+    <div class="input-container">
+      <input type="text" id="messageInput" placeholder="Type a message..." />
+      <button onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { 
+  getFirestore, collection, addDoc, query, orderBy, onSnapshot, 
+  serverTimestamp, doc, updateDoc, limit 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ✅ Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyApQC0SouXaNm8LGZkOL6lj3BZ3NXrSNWM",
+  authDomain: "bittrades.firebaseapp.com",
+  projectId: "bittrades",
+  storageBucket: "bittrades.firebasestorage.app",
+  messagingSenderId: "1078167665856",
+  appId: "1:1078167665856:web:e8e71a92fa31667ba34125",
+  measurementId: "G-TWVV91DYWS"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const usersList = document.getElementById("usersList");
+const messagesDiv = document.getElementById("messages");
+const chatHeader = document.getElementById("chatHeader");
+const input = document.getElementById("messageInput");
+const menuBtn = document.getElementById("menuBtn");
+
+let currentUserId = null;
+let userData = {};
+
+// ✅ Ask for notification permission once
+if (Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
+
+// ✅ Mobile menu toggle
+menuBtn.addEventListener("click", () => {
+  usersList.classList.toggle("active");
+});
+
+// ✅ Load users + listen for messages
+function loadUsers() {
+  const chatsRef = collection(db, "chats");
+
+  onSnapshot(chatsRef, (snapshot) => {
+    snapshot.forEach((docSnap) => {
+      const userId = docSnap.id;
+      const userInfo = docSnap.data(); // yaha se "name" milega
+      const messagesRef = collection(db, "chats", userId, "messages");
+
+      onSnapshot(query(messagesRef, orderBy("timestamp", "desc"), limit(1)), (msgs) => {
+        if (!msgs.empty) {
+          const latest = msgs.docs[0].data();
+
+          // ✅ userData update
+          userData[userId] = {
+            name: userInfo?.name || userId,
+            lastMessage: latest.text,
+            lastMessageTime: latest.timestamp ? latest.timestamp.toMillis() : Date.now(),
+            unreadCount: latest.sender === "user" && !latest.read ? 1 : 0
+          };
+
+          // ✅ Render karo
+          renderUsers();
+
+          // ✅ Notification
+          if (latest.sender === "user" && !latest.read) {
+            if (Notification.permission === "granted") {
+              new Notification(`New message from ${userInfo?.name || userId}`, {
+                body: latest.text,
+                icon: "https://cdn-icons-png.flaticon.com/512/733/733585.png"
+              });
+            }
+          }
+        }
+      });
+    });
+  });
+}
+loadUsers();
+
+// ✅ Render users list
+function renderUsers() {
+  usersList.innerHTML = "";
+  const sortedUsers = Object.entries(userData)
+    .sort((a, b) => b[1].lastMessageTime - a[1].lastMessageTime);
+
+  sortedUsers.forEach(([userId, data]) => {
+    const time = new Date(data.lastMessageTime);
+    const timeStr = time.getHours() + ":" + String(time.getMinutes()).padStart(2, '0');
+
+    const userDiv = document.createElement("div");
+    userDiv.className = "user-item";
+    userDiv.innerHTML = `
+      <div>
+        <strong>${data.name}</strong><br>
+        <small>${data.lastMessage || ""}</small>
+      </div>
+      <div>
+        <small>${timeStr}</small>
+        ${data.unreadCount > 0 ? `<span class="unread">${data.unreadCount}</span>` : ""}
+      </div>
+    `;
+    userDiv.onclick = () => {
+      openChat(userId);
+      usersList.classList.remove("active"); 
+    };
+    usersList.appendChild(userDiv);
+  });
+}
+
+// ✅ Open chat
+function openChat(userId) {
+  currentUserId = userId;
+  chatHeader.textContent = `Chat with ${userData[userId]?.name || userId}`;
+  const messagesRef = collection(db, "chats", userId, "messages");
+
+  onSnapshot(query(messagesRef, orderBy("timestamp")), (snapshot) => {
+    messagesDiv.innerHTML = "";
+    snapshot.forEach(async (docSnap) => {
+      const data = docSnap.data();
+      const msgDiv = document.createElement("div");
+      msgDiv.classList.add("message", data.sender);
+      msgDiv.textContent = data.text;
+
+      const timeSpan = document.createElement("span");
+      timeSpan.className = "time";
+      const time = data.timestamp ? new Date(data.timestamp.toDate()) : new Date();
+      timeSpan.textContent = time.getHours() + ":" + String(time.getMinutes()).padStart(2, '0');
+      msgDiv.appendChild(timeSpan);
+      messagesDiv.appendChild(msgDiv);
+
+      // ✅ Mark as read
+      if (data.sender === "user" && !data.read) {
+        await updateDoc(doc(db, "chats", userId, "messages", docSnap.id), { read: true });
+      }
+    });
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  });
+}
+
+// ✅ Send message
+window.sendMessage = async function() {
+  if (!currentUserId) return;
+  const text = input.value.trim();
+  if (text) {
+    await addDoc(collection(db, "chats", currentUserId, "messages"), {
+      sender: "admin",
+      text,
+      timestamp: serverTimestamp(),
+      read: false
+    });
+    input.value = "";
+  }
+};
+</script>
+</body>
+</html>
