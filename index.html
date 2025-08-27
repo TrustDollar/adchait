@@ -11,10 +11,14 @@ body {
   background: #f0f0f0;
   height: 100vh;
   overflow: hidden; /* ✅ prevent double scroll */
+  display: flex;
+  flex-direction: column;
 }
 .container {
+  flex: 1;
   display: flex;
-  height: 100vh;
+  height: 100%;
+  overflow: hidden; /* ✅ double scroll remove */
 }
 .users-list {
   width: 250px;
@@ -67,6 +71,7 @@ body {
   background: #efeae2;
   display: flex;
   flex-direction: column;
+  height: calc(100% - 60px); /* ✅ adjust space for header+input */
 }
 .message {
   padding: 6px 10px 16px; /* ✅ thoda chhota */
@@ -97,6 +102,7 @@ body {
   padding: 8px; /* ✅ thoda kam */
   background: #fff;
   border-top: 1px solid #ccc;
+  flex-shrink: 0; /* ✅ input bar fix niche */
 }
 .input-container input {
   flex: 1;
@@ -126,16 +132,24 @@ body {
     left: 0;
     height: 100%;
     transform: translateX(-100%);
-    z-index: 1000;
+    z-index: 2000; /* ✅ upar laya */
   }
   .users-list.active {
     transform: translateX(0);
+  }
+  .chat-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    z-index: 1000;
   }
   #menuBtn {
     display: block;
   }
 }
 </style>
+
 </head>
 <body>
 <div class="container">
@@ -307,3 +321,4 @@ window.sendMessage = async function() {
 </script>
 </body>
 </html>
+
