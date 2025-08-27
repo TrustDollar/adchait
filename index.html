@@ -10,15 +10,15 @@ body {
   font-family: Arial, sans-serif;
   background: #f0f0f0;
   height: 100vh;
-  overflow: hidden; /* ✅ prevent double scroll */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 .container {
   flex: 1;
   display: flex;
-  height: 100%;
-  overflow: hidden; /* ✅ double scroll remove */
+  height: calc(var(--vh, 1vh) * 100); /* ✅ mobile safe height */
+  overflow: hidden;
 }
 .users-list {
   width: 250px;
@@ -26,23 +26,6 @@ body {
   border-right: 1px solid #ccc;
   overflow-y: auto;
   transition: transform 0.3s ease-in-out;
-}
-.user-item {
-  padding: 15px;
-  cursor: pointer;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-}
-.user-item:hover {
-  background: #f9f9f9;
-}
-.unread {
-  background: red;
-  color: white;
-  border-radius: 50%;
-  padding: 2px 6px;
-  font-size: 12px;
 }
 .chat-section {
   flex: 1;
@@ -58,12 +41,6 @@ body {
   display: flex;
   align-items: center;
 }
-#menuBtn {
-  display: none;
-  font-size: 22px;
-  margin-right: 10px;
-  cursor: pointer;
-}
 .messages {
   flex: 1;
   padding: 10px;
@@ -71,42 +48,17 @@ body {
   background: #efeae2;
   display: flex;
   flex-direction: column;
-  height: calc(100% - 60px); /* ✅ adjust space for header+input */
-}
-.message {
-  padding: 6px 10px 16px; /* ✅ thoda chhota */
-  margin: 6px;
-  border-radius: 8px;
-  max-width: 70%;
-  position: relative;
-  font-size: 13px; /* ✅ thoda chhota */
-  word-wrap: break-word;
-}
-.message.user {
-  background: #fff;
-  align-self: flex-start;
-}
-.message.admin {
-  background: #dcf8c6;
-  align-self: flex-end;
-}
-.message .time {
-  font-size: 10px;
-  color: #888;
-  position: absolute;
-  bottom: 3px;
-  right: 6px;
 }
 .input-container {
   display: flex;
-  padding: 8px; /* ✅ thoda kam */
+  padding: 8px;
   background: #fff;
   border-top: 1px solid #ccc;
-  flex-shrink: 0; /* ✅ input bar fix niche */
+  flex-shrink: 0;
 }
 .input-container input {
   flex: 1;
-  padding: 8px; /* ✅ chhota input */
+  padding: 8px;
   font-size: 13px;
   border: none;
   outline: none;
@@ -124,7 +76,7 @@ body {
   font-size: 16px;
 }
 
-/* ✅ Mobile Responsive */
+/* ✅ Mobile menu */
 @media (max-width: 768px) {
   .users-list {
     position: fixed;
@@ -132,23 +84,30 @@ body {
     left: 0;
     height: 100%;
     transform: translateX(-100%);
-    z-index: 2000; /* ✅ upar laya */
+    z-index: 2000;
+    background: #fff;
   }
   .users-list.active {
     transform: translateX(0);
   }
-  .chat-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    z-index: 1000;
-  }
   #menuBtn {
     display: block;
+    font-size: 22px;
+    margin-right: 10px;
+    cursor: pointer;
   }
 }
 </style>
+
+<script>
+// ✅ Mobile viewport height fix
+function setVh() {
+  let vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+setVh();
+window.addEventListener('resize', setVh);
+</script>
 
 </head>
 <body>
@@ -321,4 +280,5 @@ window.sendMessage = async function() {
 </script>
 </body>
 </html>
+
 
