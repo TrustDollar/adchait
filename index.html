@@ -71,7 +71,7 @@ body {
   cursor: pointer;
 }
 
-/* Messages */
+  /* Messages */
 .messages {
   flex: 1;
   margin-top: 60px;
@@ -81,29 +81,37 @@ body {
   display: flex;
   flex-direction: column;
 }
+
 .message {
   padding: 8px 12px 18px;
   margin: 6px;
   border-radius: 8px;
-  max-width: 70%;
+  max-width: 85%;              /* ✅ Mobile pe jyada width le */
   position: relative;
   font-size: 14px;
-  word-wrap: break-word;
+  word-wrap: break-word;        /* ✅ Word break ho */
+  overflow-wrap: break-word;    /* ✅ Long text wrap hoga */
+  white-space: pre-wrap;        /* ✅ New line & spaces respect kare */
+  box-sizing: border-box;
 }
+
 .message.user {
   background: #fff;
   align-self: flex-start;
 }
+
 .message.admin {
   background: #dcf8c6;
   align-self: flex-end;
 }
+
 .message .time {
   font-size: 10px;
   color: #888;
   position: absolute;
   bottom: 3px;
   right: 6px;
+  white-space: nowrap;   /* ✅ Time ek line me hi rahe */
 }
 
 /* Input */
